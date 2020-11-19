@@ -7,10 +7,7 @@ from util import sine_wave, merge_dict_list, SignalDecomposer
 from plot_util import MultiplotManager
 
 
-
-
-
-def add_wave(plot_row, freq=440.0, t=0.100, res=44100.0, options=None):
+def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
     """
     Create two horizontally arranged plots from a pure sine wave, or a weighted mixture of sine waves.
         Left:  time-domain, waveform(s)
@@ -28,7 +25,7 @@ def add_wave(plot_row, freq=440.0, t=0.100, res=44100.0, options=None):
     """
     # Set-up:
     options = {} if options is None else options
-    time_axis, freq_axis = plot_row
+    time_axis, freq_axis = manager.get_row_axes(row_ind)
 
     defaults = {'freq': None,
                 'amplitude': 1.0,
@@ -79,7 +76,7 @@ def add_wave(plot_row, freq=440.0, t=0.100, res=44100.0, options=None):
     spectrum_options.update(options)
     return_plots[1].append(freq_axis.plot(freq[1:], power[1:],
                                           color=waves[0]['color'], **spectrum_options['spectrum_kwargs']))
-
+    manager.set_row_plots(return_plots, row_ind)
     return return_plots
 
 
@@ -104,31 +101,40 @@ def auto_scale(axis, vert=False, horiz=False, margin=0.025):
 def make_figure_1(filename=None, overwrite=False):
     # general size
     w = 4.5  # inches
-    h = 2.5
-    rows = 1
-    cols = 2
+    h = 3.5
+    rows = 3
 
     # set-up plot styles for each cell
     m = MultiplotManager(cells=[['waveform', 'spectrum']] * rows,
                          dims=(w, h),
-                         overwrite=overwrite)
+                         overwrite=overwrite,
+                         sharex='col')
 
     # customize bottom & top rows with titles & axis labels, etc.
     m.get_cell_style(0, 0).update({'subtitle': 'time domain',})
-    m.get_cell_style(0, 1).update({'subtitle': 'frequency domain', 'x_clip': [35.0, None]})
+    m.get_cell_style(0, 1).update({'subtitle': 'frequency domain'})
     m.get_cell_style(-1, 0).update({'xlabel': r"$t$ (sec)",  # Bottom cells get x-ticks & labels
                                     'xticks': True,
                                     'xticklabels': True})
-
     m.get_cell_style(-1, 1).update({'xlabel': r"$f$ (Hz)",  # spectrum cells get y-tick but no label
                                     'xticks': True,
                                     'xticklabels': True,})
+    import pprint;
+    pprint.pprint(m._cells)
+    for row_i in range(rows):
+        m.get_cell_style(row_i, 1).update({'x_clip': [35.0, None]})
 
-    # add things
+    # Add things:
     f0 = 111.1111  # in Hz
-    plot_row = m.get_row_axes(0)
-    add_wave(plot_row, freq=(f0, f0 * 2.1221))
+    add_wave(m, 0, freq=(f0,))
 
+    freqs = f0, f0 * 1.589345221
+    add_wave(m, 1, freq=freqs)
+
+    freqs = [f0] + (f0 * (1. + 4.23 * np.random.rand(30))).tolist()
+    add_wave(m, 2, freq=tuple(freqs))
+
+    # Finalize and save.
     m.save(filename)
 
 

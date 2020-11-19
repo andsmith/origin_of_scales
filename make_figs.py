@@ -12,4 +12,4 @@ if __name__ == "__main__":
 
     # Generate all figures:
 
-    make_figure_1("figure_1.pgf", overwrite=parsed.clobber, live=parsed.plot)
+    make_figure_1(filename="figure_1.pgf", overwrite=parsed.clobber)
