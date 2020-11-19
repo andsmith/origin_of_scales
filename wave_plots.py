@@ -4,74 +4,90 @@ import matplotlib.pyplot as plt
 import argparse
 import sys
 from util import sine_wave, merge_dict_list, SignalDecomposer
-from plot_util import MultiplotManager, WAVEFORM_PADDING, LINE_WIDTH
+from plot_util import MultiplotManager
 
 
 
-def plot_waves(waves, axes, t=0.100, res = 44100.0, fft=True, extras = {}):
+
+
+def add_wave(plot_row, freq=440.0, t=0.100, res=44100.0, options=None):
     """
-    waves:  list of dicts, each with keys in {'freq', 'amp', 'color', 'plot_string', 'phase_angle'}, all but first are optional.
+    Create two horizontally arranged plots from a pure sine wave, or a weighted mixture of sine waves.
+        Left:  time-domain, waveform(s)
+        Right:  frequency-domain, FFt, cleaned up
+    plotter:  MultiplotManager object
+    row_index:  which row of plotter's grid are we drawing to?
+    freq: specify just frequency(frequencies) with a float (tuple of floats), or
+        more completely with phase, amplitude, color, etc using a dict/list of dicts
+        (for options, see "defaults" below).  All but 'freq' are optional for the dict option.
     axes: list of 2 axes, for time domain and freq domain.
     t: time (seconds) to synth
     res:  sample rate
-    options:  dict with options:
-        title: text, [None]
-        x_label: text, [None]
-        y_label: text, [None]
+
+    :returns: pair lists of plots, the ones added to the two axes
     """
+    # Set-up:
+    options = {} if options is None else options
+    time_axis, freq_axis = plot_row
 
-    import pprint
-    pprint.pprint(self._tones)
-    time_axis = axes[0]
+    defaults = {'freq': None,
+                'amplitude': 1.0,
+                'phase_angle': 0.0,
+                'spectrum_threshold': 0.25,  # Prune l/r parts of FFT < this fraction of peak (log transformed).
+                'spectrum_padding': 4,  # After pruning, add back this many on each side (if possible)
+                'color': 'black',
+                'kwargs': {},  # additional args to matplotlib.plot() command
+                'spectrum_kwargs': {},
+                }
 
-    plots = []
-    y_values = []
-    transforms = []
-    y_sum = None
-    for tone in self._tones:
-        tone = tone.copy()
-        plot_string = tone.pop('plot_string', '-')
-        color = tone.pop('color', 'black')
-        freq = tone.pop('freq')
-        amp = tone.pop('amp', 1.0)
-        phase = tone.pop('phase_angle',0.0)
-        x, y = sine_wave(freq, amp, phase, t, res)
-        y_values.append(y)
-        y_sum = y_sum+y if y_sum is not None else y
-        if 'plot_components' in extras[0]:
-            plots.append(time_axis.plot(x, y, plot_string, color=color, **tone))
+    waves = [defaults.copy()]
+    if isinstance(freq, float):
+        waves[0]['freq'] = freq
+    elif isinstance(freq, dict):
+        waves[0].update(freq)
+    elif isinstance(freq, tuple):
+        waves = [defaults.copy() for _ in range(len(freq))]
+        for i, w in enumerate(waves):
+            w['freq'] = freq[i]
+    elif isinstance(freq, list):
+        waves = freq
+    else:
+        raise Exception("Param 'freq' must be float, dict, or list of dicts.")
+    return_plots = [[], []]
+    cumulative_wave = np.arange(0.0, t, 1.0 / res) * 0
 
-    plots.append(time_axis.plot(x, y_sum, plot_string, color=color, **tone))
+    # Generate the signal(s), plot time domain half
+    x_vals = None
+    for wave in waves:
+        x, y = sine_wave(wave['freq'], wave['amplitude'], wave['phase_angle'], t, res)
+        x_vals = x
+        cumulative_wave += y
+        if 'plot_components' in options:
+            raise Exception("Individual component timeseries plots not ipmlemented!")
+
+    return_plots[0].append(time_axis.plot(x_vals, cumulative_wave,
+                                          color=waves[0]['color'], **waves[0]['kwargs']))
+    # Do signal analysis
+    sig = SignalDecomposer(cumulative_wave,
+                           res,
+                           spectrum_threshold=waves[0]['spectrum_threshold'],
+                           spectrum_padding=waves[0]['spectrum_padding'])
+    power, freq = sig.get_power()
+
+    # Plot frequency domain half
+    spectrum_options = defaults.copy()
+    spectrum_options.update(options)
+    return_plots[1].append(freq_axis.plot(freq[1:], power[1:],
+                                          color=waves[0]['color'], **spectrum_options['spectrum_kwargs']))
+
+    return return_plots
 
 
-    apply_plot_properties(time_axis, extras[0])
-
-    freq_axis = axes[1]
-    sig = SignalDecomposer(y_sum, res)
-    color = tone.pop('color', 'black')
-    thresh = extras[1].get('prune', {'thresh':None})['thresh']
-    margin = extras[1].get('prune', {'margin':None})['margin']
-    power, freq = sig.get_power(prune_threshold =thresh, prune_margin = margin)
-    plot_str = extras[1].get('plot_str', "-")
-    print(freq[1:].min(), freq[1:].max(), power[1:].min(), power[1:].max())
-    freq_axis.plot(freq[1:], power[1:], plot_str, color=color, **extras[1]['plot_args'])
-
-    apply_plot_properties(freq_axis, extras[1])
-
-    if 'prune' in extras[1] and 'min_freq_hz' in extras[1]['prune']:
-        xlim = freq_axis.get_xlim()
-        xlim = [np.max([extras[1]['prune']['min_freq_hz'], xlim[0]]), xlim[1]]
-        freq_axis.autoscale(enable=False, axis='x', tight=True)
-        freq_axis.set_xlim(xlim)
-        freq_axis.set_xticklabels([])
-
-    return plots
-
-
-def auto_scale(axis, vert=False, horiz=False, margin = 0.025):
+def auto_scale(axis, vert=False, horiz=False, margin=0.025):
     margin = 0.025 if margin is None else margin
+
     def widen(interval):
-        half_length = (1.0 + margin) * (interval[1]-interval[0]) / 2.0
+        half_length = (1.0 + margin) * (interval[1] - interval[0]) / 2.0
         center = np.mean(interval)
         return (center - half_length, center + half_length)
 
@@ -85,53 +101,36 @@ def auto_scale(axis, vert=False, horiz=False, margin = 0.025):
     print("Set new limits:  %s, %s" % (x_new, y_new))
 
 
+def make_figure_1(filename=None, overwrite=False):
+    # general size
+    w = 4.5  # inches
+    h = 2.5
+    rows = 1
+    cols = 2
 
-def make_figure_1(w, h, rows=3, cols=2, overwrite=False):
+    # set-up plot styles for each cell
+    m = MultiplotManager(cells=[['waveform', 'spectrum']] * rows,
+                         dims=(w, h),
+                         overwrite=overwrite)
 
-    # set-up
-    m = MultiplotManager(shape=(rows, cols), dims=(w,h), overwrite = True)
+    # customize bottom & top rows with titles & axis labels, etc.
+    m.get_cell_style(0, 0).update({'subtitle': 'time domain',})
+    m.get_cell_style(0, 1).update({'subtitle': 'frequency domain', 'x_clip': [35.0, None]})
+    m.get_cell_style(-1, 0).update({'xlabel': r"$t$ (sec)",  # Bottom cells get x-ticks & labels
+                                    'xticks': True,
+                                    'xticklabels': True})
+
+    m.get_cell_style(-1, 1).update({'xlabel': r"$f$ (Hz)",  # spectrum cells get y-tick but no label
+                                    'xticks': True,
+                                    'xticklabels': True,})
 
     # add things
-    f0 = 111.1111
-    add_wave(m, freq=f0)
+    f0 = 111.1111  # in Hz
+    plot_row = m.get_row_axes(0)
+    add_wave(plot_row, freq=(f0, f0 * 2.1221))
 
-    top_params = [{'subtitle':'time domain', 'yscale': 'waveform'},
-                  {'subtitle':'frequency domain'}]
-
-    bottom_params = [{'xlabel': r"$t$ (sec)", 'yscale': 'waveform'},
-                     {'xlabel': r"$f$ (Hz)"}]
-
-    middle_params = [{'xnoticklabels': True, 'yscale': 'waveform'}, 
-                     {'xnoticklabels': True}]
-
-    common_params = [{'ynoticks':True, 'yscale': 'waveform'},
-                     {'plot_str': "o-",
-                      'ylabelpad': -2,'ylabel': r"power",
-                      'ynoticklabels': True,
-                      'x_scale': 'log',
-                      'grid': {'which': 'both', 'axis':'both'},
-                      'autoscale': {'vert': True, 'horiz': True},
-                      'prune':{'thresh': 0.5, 'margin': 5, 'min_freq_hz': 50.0} ,
-                      'plot_args':{'linewidth':LINE_WIDTH, 'markersize': 1.2}}]
-
-    top_extras = merge_dict_list(common_params, top_params)
-    middle_extras = merge_dict_list(common_params, middle_params)
-    bottom_extras = merge_dict_list(common_params, bottom_params)
-    
-    # make figure
-    print(1)
-    wp.plot_wave(axes=axes[0], extras=top_extras) 
-                                      
-    if True:
-        wp.add_tone(freq= f0* 2, amp=1./2, linewidth=LINE_WIDTH)
-                                      
-        print(2)
-        wp.plot_wave(axes=axes[1], extras=middle_extras)
-        wp.add_tone(freq= f0* 3, amp=1./3, linewidth=LINE_WIDTH)
-        print(3)
-        wp.plot_wave(axes=axes[2], extras=bottom_extras)
-                                      
+    m.save(filename)
 
 
-if __name__=="__main__":
-    make_figure_1(w=4.5, h=3)
+if __name__ == "__main__":
+    make_figure_1()
