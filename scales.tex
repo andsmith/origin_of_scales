@@ -1,0 +1,292 @@
+\documentclass[letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{blindtext}
+\usepackage[toc,page]{appendix}
+\usepackage[hang,flushmargin]{footmisc}
+\usepackage{lipsum}
+\usepackage{tikz}
+\usepackage{pgf}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\usepackage{newunicodechar}
+\DeclareUnicodeCharacter{2212}{-}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+\makeatletter
+\newcommand{\algorithmfootnote}[2][\footnotesize]{%
+  \let\old@algocf@finish\@algocf@finish% Store algorithm finish macro
+  \def\@algocf@finish{\old@algocf@finish% Update finish macro to insert "footnote"
+    \leavevmode\rlap{\begin{minipage}{\linewidth}
+    #1#2
+    \end{minipage}}%
+  }%
+}
+\makeatother
+
+
+
+
+\title{\emph{Why scales?}}
+\author{Andrew T. Smith}
+
+
+
+
+
+\begin{document}
+\maketitle
+\thanks{\emph{[Work in progress!]}
+
+
+
+\section{The Organization of Pitches into a scale}
+
+Why do we have scales?  This particular set of notes we're allowed to use to make music?  ``Allowed,'' in the sense that, when we disobey, the audience gets angry.
+
+ In the first half of this document, I'll try to justify why scales exist.  Specifically, why music made by picking pitches from one of our Human scales sounds much better than music whose notes lack any scale relationship.  Or, put alternatively, how to make a scale from scratch in a way that the resulting set of notes has these nice properties, and as an example, I'll walk through the construction of the 7-note major scale with this algorithm.  In the second half, I'll talk more specifically about the math of temperaments, using the definitions from the first part.
+
+\subsection{Definition of mathematical consonance}
+\theoremstyle{definition}
+\begin{definition}[Overtone Series]
+\label{overtones}
+For fundamental frequency $f_1$, the "overtone series of $f_1$" is the set of pitches $\{f_n = n * f_1$, where $n=1, 2, 3, ...\}$.  Alternatively, we say "$h$ is in the $f_1$'s overtone series" if there is some positive integer $i$ such that $h = i * f_1$. (This is a standard definition, though some call the fundamental $f_0$.)
+
+\end{definition}
+
+
+
+\theoremstyle{definition}
+\begin{definition}[Consonnance]
+\label{consonnance}
+The numerical consonance between two pitches $f$ and $h$ (WLOG $f < h$) is defined as the highest frequency $c = C(f, h)$ that has both $f$ and $h$ in its overtone series.  (i.e. maximum $g$ such that there exist positive integers $x, y$ where $xc=f$ and $yc=h$.)  If $h/f$ is not rational, no such $c$, $x$, or $y$ exist, so just define consonance in those cases to be zero. 
+
+
+Similarly to the consonance between two pitches, we can define the consonance between a pitch $f$ and a \emph{set} of pitches $S$ as the minimum consonance between $f$ and every frequency $h_i$ in $S$.  I.e., $C(f, S)$ is a bit of notational abuse for $\min_{h \in S} C(f, h)$.
+\end{definition}
+An algorithm to compute consonance is in appendix \ref{conalgorithm}.
+
+The intuition behind definition \ref{consonnance} is to quantify how low you have to go down in pitch $c$ before you find one that can fit both $f$ and $h$ in its overtone series.  For example, pick two random frequencies,  
+\begin{align*}
+F &= 1325.1 \textrm{ Hz and}\\
+H &= 521.1 \textrm{ Hz} 
+\end{align*}
+and you should expect their consonance to be very low. And it is:
+\begin{align*}
+&C(1325.1, 521.1) =\bm{ 0.3} \mathbf{ Hz} \\
+&[ \textrm{Also, here }x = 4417, y=1737].  
+\end{align*}
+Now consider consonant notes:
+\begin{align*}
+F&= 440 \textrm{ (the note A) and}\\
+H &= 660 \textrm{ (the note E)}. 
+\end{align*}
+Then:
+\begin{align*}
+C(440, 660) &=\bm{220} \mathbf{ Hz}
+\end{align*}
+I.e., much higher, and indeed the notes A(440) and E(660) form a consonant perfect fifth.
+
+This is my own definition of consonance; I don't know exactly how it relates to those in the literature, but I'm going to try to justify it in the next section.  When we studied this in my music cognition class, it wasn't \emph{precisely} identical to the musical concept of consonance, partly because it was in a psychology laboratory setting rather than a music studio, but I think this covers the musical concept well enough to begin constructing a scale.
+
+Note that numerical consonance can behave counter-intuitively around very near pitches.  If $f$ and $g$ are exactly equal ($f = g$), their consonance evaluates to that same frequency ($c = f = g$), but if they are \emph{even slightly} different, then their consonance drops to near zero.  It is only as they become even more different that their consonance begins to rise again.   This doesn't behave like normal distance metrics, but it does correspond to the way that nearly perfectly (but not \emph{exactly}) in tune intervals sound ear-splittingly dissonant.
+
+
+\subsection{Why \emph{mathematical} consonance is measuring \emph{perceptual} (musical) consonance}
+\label{perceptual}
+The causes of resonant sounds (as opposed to noise-like sounds), things like vibrating strings, air-columns, bodies of wood, etc., have the property that the things that cause their vibrating parts to vibrate at the fundamental frequency $f_0$ also cause vibrations at each of the overtones in $f_0$'s overtone series (to varying degrees).  For example, plucking a string adds energy to each of the vibrational modes that don't have a node where the string was plucked. 
+
+\begin{figure}
+  \label{soundcomponents}
+  \begin{center}  
+
+    \input{figure_1.pgf}
+  \end{center}
+  \caption{Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+sounds.}
+\end{figure}
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+\subsection{Why musical scales have a cyclic nature (about the octave)}
+\label{cyclic}
+(add here)
+
+
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+
+
+
+
+
+\subsection{Why a musical scale should be mathematically consonant and cyclic about the octave to sound nice}
+(i.e. putting together sections \ref{perceptual} \ref{cyclic})
+(add here)
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+
+
+
+
+
+
+\subsection{Recipe for a scale}
+
+The general process is additive, 
+\begin{itemize}
+  \item Start with the scale containing only a fundamental frequency $F$.
+  \item Pick candidate frequencies from $F$'s overtones, in increasing order, repeatedly dividing each one by 2 until it is within an octave of $F$.  
+  \item Evaluate each candidate suitability to be added to the scale by determining if its (pitch-set) consonance with the existing scale is above some threshold $T$ (from definition \ref{consonnance}).
+  \item Repeat until we have enough notes, or all candidates are exhausted (more on the stopping point later).  
+\end{itemize}
+
+Note: We are actually constructing a set of frequency \emph{coefficients} rather than a set of frequencies, what you would have to multiply by $F$ to get the set of frequencies.  The $F$ itself is unimportant.
+
+\medskip
+Algorithm \ref{algorithm} states this more formally.
+
+\medskip
+\begin{algorithm}[H]
+\label{algorithm}
+\SetAlgoLined
+
+ \SetKwInOut{Input}{Input}
+ \SetKwInOut{Output}{Output}
+ \SetKwInOut{Initialize}{Initialize}
+
+
+\medskip
+\Input{
+$n$ -- number of notes in the scale being constructed\\
+$T$ -- consonance threshold)
+}
+\smallskip
+\Output{coefficients $c_i$ where $1 < c_i < 2$ for $i = 1..n$, i.e. the scale notes}
+\smallskip
+\Initialize{
+   $S = \{1\}$ -- set of scale notes, start with just the fundamental \\
+   $O_c = 2$ -- overtone candidate, next overtone to check is $2F$\\
+   $I = INT([0,1], \{\})$   -- interval data structure
+}
+\smallskip
+\While{$|S|<n$}{
+  \smallskip
+  \textrm{\bf{Let}}
+  \begin{align*}
+    v   &= \floor{\log_2{O_c}} \textrm{ -- number of octaves to transpose down candidate}\\  
+    c_c &= \frac{O_c}{2^v}\textrm{ -- transposed coefficient candidate, now $1 < c_c < 2$}
+  \end{align*}
+  \uIf{$C(F_c, S) > T$ } {
+\smallskip
+    $S \gets S \cup \{c_c\}$  (add candidate to set of scale coefficients)\\
+\smallskip
+    $I \gets I \cup  (c_c \pm T)$ (add new interval, now off-limits)\\
+   }
+\smallskip
+  $O_c \gets O_c + 1$\\
+\smallskip
+  \uIf{ $I \setminus [0, 1] = {} $ }{  
+      \bf{break} \textnormal{ (no more viable candidates)}
+    }
+\medskip
+ }
+\smallskip
+ \Return{$S$}
+\medskip
+ \caption{How to generate a scale}
+
+\end{algorithm}
+
+\subsubsection{Interval data structure}
+I'm not sure how this works yet.  For each added coefficient $c_i$, we are precluding any future candidates $c_j, i<j$ for which $C(c_i, c_j)= F_0 < T$, that is, the set $P_i$:
+\begin{equation}\label{eqnineq}
+P_i = \{c_j: C(c_i, c_j) < T, c\in[0,1]\}
+\end{equation}
+$P_i$ is the set of all candidates that will be too dissonant with $c_i$. So from definition of consonance, we know there exists two integers $x, y$ and a fundamental $F_0$ (different from $F$ the ``seed'' of our growing scale; since the coefficients are scaled down to the octave above $F$, they cannot be in the overtone series of $F$), where:
+
+\begin{align}
+xF_0 &= c_iF,\\
+yF_0 &= c_jF
+\end{align}
+
+I'm not sure how to design an data structure so that membership in $P_i$ can be tested quickly, intervals can be added quickly, and termination is guaranteed.  I think it may have something to do with interval arithmetic on the p-adic numbers. 
+
+Need to think more on this...
+
+\subsection{Constructing the Major Scale}
+(add here)
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Temperaments}
+\subsection{The Twist... the Pythagorean Comma}
+
+There is a subtle mathematical bug in the scale construction process described so far.  Suppose we have the major scale constructed in the previous section and then we start counting up by constant musical intervals from a fundamental pitch.  Depending on the interval we pick, we might not end up where we expect.  For example, start with $f=110$ Hz, (A):
+\begin{itemize}
+\item Ascending by fifths:  multiply $f$ by 3 to jump up a fifth (and an octave), and get to E = 330 HZ.  Do this 11 more times to go all the way around the circle of fifths (A E B F\# C\# G\# D\# A\# E\#/F B\#/C F\#\#/G C\#\#/D G\#\#/A) and you should find your way back to an $A_{\textrm{fifths}} = 3^{12} * 110  \textrm{ Hz} = \bm{58,458,510} \textrm{ Hz }$.
+
+\item Ascending by octaves: multiply $f$ by 2 repeatedly, until you get to that A, and... we can't!  The closest we can get is 7 octaves:  $A_{\textrm{octaves}} = 2^7 * 110 \textrm{ Hz } = \bm{57,671,680} \textrm{ Hz }$
+\end{itemize}
+
+We thought we were ending up on the same (soul-shattering) note, but, we ended up at two slightly different frequencies.  What happened?
+
+Putting it mathematically, in the first procedure, we are increasing by powers of 3, and in the second, by powers of 2.  But no power of three can be equal to a power of 2! (add proof by prime factorization here)
+
+The ratio $A_{\textrm{fifths}} / A_{\textrm{octaves}}$ was discovered by Pythagoras and his gang (the distance in Hz is called the "Pythagorean comma").
+(add implications here)
+
+\subsection{The solution... Temperaments}
+(add here)
+
+\subsection{Just Intonation}
+(add here)
+\subsection{Equal Temperament}
+(add here)
+
+
+\begin{appendix}
+\appendix
+\appendixpage
+\section{Algorithm to compute consonance function}
+
+\label{conalgorithm}
+\begin{algorithm}[H]
+\SetAlgoLined
+
+ \SetKwInOut{Input}{Input}
+ \SetKwInOut{Output}{Output}
+ \SetKwInOut{Initialize}{Initialize}
+
+\medskip
+\Input{$f, g$ -- Two frequencies to compare\\$tol$ - tolerance (Hz)}
+\smallskip
+\Output{$c$ - consonance (Hz), largest $c$ st. $f=ic$ and $g=jc$ for some integers $i, j$}
+\smallskip
+(add here)
+\medskip
+ \caption{Find consonance $C(f,g)$ between $f$ and $g$}
+
+\end{algorithm}
+
+
+
+
+\end{appendix}
+\end{document}
+
+%%  LocalWords:  WLOG notational xF iF yF jF adic
