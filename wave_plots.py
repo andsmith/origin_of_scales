@@ -30,7 +30,7 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
     defaults = {'freq': None,
                 'amplitude': 1.0,
                 'phase_angle': 0.0,
-                'spectrum_threshold': 0.25,  # Prune l/r parts of FFT < this fraction of peak (log transformed).
+                'spectrum_threshold': 0.05,  # Prune l/r parts of FFT < this fraction of peak power.
                 'spectrum_padding': 4,  # After pruning, add back this many on each side (if possible)
                 'color': 'black',
                 'kwargs': {},  # additional args to matplotlib.plot() command
@@ -41,13 +41,18 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
     if isinstance(freq, float):
         waves[0]['freq'] = freq
     elif isinstance(freq, dict):
+
         waves[0].update(freq)
     elif isinstance(freq, tuple):
         waves = [defaults.copy() for _ in range(len(freq))]
         for i, w in enumerate(waves):
             w['freq'] = freq[i]
     elif isinstance(freq, list):
-        waves = freq
+        waves =[]
+        for f in freq:
+            waves.append(defaults.copy())
+            waves[-1].update(f)
+
     else:
         raise Exception("Param 'freq' must be float, dict, or list of dicts.")
     return_plots = [[], []]
@@ -107,28 +112,31 @@ def make_figure_1(filename=None, overwrite=False):
     # set-up plot styles for each cell
     m = MultiplotManager(cells=[['waveform', 'spectrum']] * rows,
                          dims=(w, h),
-                         overwrite=overwrite,
-                         sharex='col')
+                         sharex='col',
+                         overwrite=overwrite)
 
     # customize bottom & top rows with titles & axis labels, etc.
     m.get_cell_style(0, 0).update({'subtitle': 'time domain',})
     m.get_cell_style(0, 1).update({'subtitle': 'frequency domain'})
+
     m.get_cell_style(-1, 0).update({'xlabel': r"$t$ (sec)",  # Bottom cells get x-ticks & labels
-                                    'xticks': True,
-                                    'xticklabels': True})
+                                    'xticklabels': True,
+                                    })
+
     m.get_cell_style(-1, 1).update({'xlabel': r"$f$ (Hz)",  # spectrum cells get y-tick but no label
-                                    'xticks': True,
-                                    'xticklabels': True,})
-    import pprint;
-    pprint.pprint(m._cells)
+                                    'xticklabels': True,
+                                    })
     for row_i in range(rows):
         m.get_cell_style(row_i, 1).update({'x_clip': [35.0, None]})
 
     # Add things:
-    f0 = 111.1111  # in Hz
+    f0 = 110.0  # in Hz
     add_wave(m, 0, freq=(f0,))
 
-    freqs = f0, f0 * 1.589345221
+    amplitudes = np.exp(-np.linspace(3., 5., 7))
+    amplitudes /= np.sum(amplitudes)
+    freqs = [{'freq': f0*(i+1), 'amplitude': amplitudes[i]} for i in range(len(amplitudes))]
+
     add_wave(m, 1, freq=freqs)
 
     freqs = [f0] + (f0 * (1. + 4.23 * np.random.rand(30))).tolist()

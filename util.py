@@ -31,17 +31,29 @@ class SignalDecomposer(object):
         self._pad = spectrum_padding
 
     
-    def get_power(self):
+    def get_power(self, no_crop=False):
+
+        min_low_to_crop = 10
+
+        
         p = self.mag
         freqs = self.freq_bins
-        if self._thresh is not None:
-            min_val = np.exp((np.log(np.nanmax(self.mag))*self._thresh - (1.0 - self._thresh)*np.log(np.nanmin(self.mag))))
+        if self._thresh is not None or not no_crop:
+            #min_val = np.exp((np.log(np.nanmax(self.mag))*self._thresh + (1.0 - self._thresh)*np.log(np.nanmin(self.mag))))
+            min_val = np.nanmax(self.mag) * self._thresh
 
-            lowest_usable_index = np.argmin(np.where(self.mag >= min_val))
+            lowest_usable_index = np.min(np.where(self.mag >= min_val))
             lowest_usable_index = np.max((lowest_usable_index - 2, 0))
-            highest_usable_index = np.argmax(np.where(self.mag >= min_val))
+
+            if lowest_usable_index < min_low_to_crop:
+                lowest_usable_index = 0
+
+            highest_usable_index = np.max(np.where(self.mag >= min_val))
             highest_usable_index = np.min((highest_usable_index + self._pad, self.mag.size))
+
+
+
             print("Pruning to %i bins." % (highest_usable_index, ))
             p = p[lowest_usable_index:highest_usable_index]
-            freqs = freqs[lowest_usable_index:highest_usable_index]
+            freqs= freqs[lowest_usable_index:highest_usable_index]
         return p, freqs
