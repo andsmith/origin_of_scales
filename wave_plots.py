@@ -48,7 +48,7 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
         for i, w in enumerate(waves):
             w['freq'] = freq[i]
     elif isinstance(freq, list):
-        waves =[]
+        waves = []
         for f in freq:
             waves.append(defaults.copy())
             waves[-1].update(f)
@@ -74,8 +74,12 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
                            res,
                            spectrum_threshold=waves[0]['spectrum_threshold'],
                            spectrum_padding=waves[0]['spectrum_padding'])
+    import ipdb;
+    ipdb.set_trace()
     power, freq = sig.get_power()
 
+
+    print(freq.min(), freq.max())
     # Plot frequency domain half
     spectrum_options = defaults.copy()
     spectrum_options.update(options)
@@ -83,24 +87,6 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
                                           color=waves[0]['color'], **spectrum_options['spectrum_kwargs']))
     manager.set_row_plots(return_plots, row_ind)
     return return_plots
-
-
-def auto_scale(axis, vert=False, horiz=False, margin=0.025):
-    margin = 0.025 if margin is None else margin
-
-    def widen(interval):
-        half_length = (1.0 + margin) * (interval[1] - interval[0]) / 2.0
-        center = np.mean(interval)
-        return (center - half_length, center + half_length)
-
-    x, y = axis.get_xlim(), axis.get_ylim()
-    axis.autoscale_view(tight=True)
-    x_tight, y_tight = axis.get_xlim(), axis.get_ylim()
-    x_new = widen(x_tight) if horiz is not None and horiz else x
-    y_new = widen(y_tight) if vert is not None and vert  else y
-    axis.set_xlim(x_new)
-    axis.set_ylim(y_new)
-    print("Set new limits:  %s, %s" % (x_new, y_new))
 
 
 def make_figure_1(filename=None, overwrite=False):
@@ -116,8 +102,8 @@ def make_figure_1(filename=None, overwrite=False):
                          overwrite=overwrite)
 
     # customize bottom & top rows with titles & axis labels, etc.
-    m.get_cell_style(0, 0).update({'subtitle': 'time domain',})
-    m.get_cell_style(0, 1).update({'subtitle': 'frequency domain'})
+    m.get_cell_style(0, 0).update({'subtitle': 'time domain - F = 110.0 Hz',})
+    m.get_cell_style(0, 1).update({'subtitle': 'frequency domain - FFT (unscaled)'})
 
     m.get_cell_style(-1, 0).update({'xlabel': r"$t$ (sec)",  # Bottom cells get x-ticks & labels
                                     'xticklabels': True,
@@ -126,6 +112,9 @@ def make_figure_1(filename=None, overwrite=False):
     m.get_cell_style(-1, 1).update({'xlabel': r"$f$ (Hz)",  # spectrum cells get y-tick but no label
                                     'xticklabels': True,
                                     })
+    m.get_cell_style(1, 0).update({'subtitle': "F0 + 7 overtones"})
+    m.get_cell_style(2, 0).update({'subtitle': "7 random freq./amp."})
+
     for row_i in range(rows):
         m.get_cell_style(row_i, 1).update({'x_clip': [35.0, None]})
 
@@ -133,15 +122,15 @@ def make_figure_1(filename=None, overwrite=False):
     f0 = 110.0  # in Hz
     add_wave(m, 0, freq=(f0,))
 
-    amplitudes = np.exp(-np.linspace(3., 5., 7))
+    amplitudes = np.exp(-np.linspace(3., 5., 8))
     amplitudes /= np.sum(amplitudes)
-    freqs = [{'freq': f0*(i+1), 'amplitude': amplitudes[i]} for i in range(len(amplitudes))]
+    freqs = [{'freq': f0 * (i + 1), 'amplitude': amplitudes[i]} for i in range(len(amplitudes))]
 
     add_wave(m, 1, freq=freqs)
 
-    freqs = [f0] + (f0 * (1. + 4.23 * np.random.rand(30))).tolist()
-    add_wave(m, 2, freq=tuple(freqs))
+    freqs = (50 + 500 * np.random.rand(7)).tolist()
 
+    add_wave(m, 2, freq=tuple(freqs))
     # Finalize and save.
     m.save(filename)
 

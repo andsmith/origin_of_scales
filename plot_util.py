@@ -75,9 +75,8 @@ class MultiplotManager(object):
         self._finalized = True
 
     def save(self, filename):
-        self.print_axis_state()
         self._finalize_plot()
-        self.print_axis_state()
+
         # if not self._finalized:
         #    raise Exception("Plot save before finalized!")
         if filename is None:
@@ -125,8 +124,8 @@ def _get_limits_from_plots(plots):
 
 def _handle_axis_appearance(ax, plots, props, verbs):
     # figure our state vars
-    x_dir = 'in' if 'xticklabels' in props and 'xticks' in props and not props['xticklabels'] else 'out'
-    y_dir = 'in' if 'yticklabels' in props and 'yticks' in props and not props['yticklabels'] else 'out'
+    x_dir = 'in' if 'xticklabels' in props and 'xticks' in props and not props['xticklabels'] else 'inout'
+    y_dir = 'in' if 'yticklabels' in props and 'yticks' in props and not props['yticklabels'] else 'inout'
     x_ticks = props.get('xticks', False)
     y_ticks = props.get('xticks', False)
     x_ticklabels = props.get('xticklabels', False)
@@ -134,9 +133,11 @@ def _handle_axis_appearance(ax, plots, props, verbs):
     x_minor = props.get('xminor', False)
     y_minor = props.get('yminor', False)
 
+    """
     print("%s - tick state:  X=(T-%s, L-%s, M-%s, %s), Y=(T-%s, L-%s, M-%s, %s)" % (
         verbs, x_ticks, x_ticklabels, x_dir, x_minor,
         y_ticks, y_ticklabels, y_dir, y_minor))
+    """
 
     ax.tick_params('x', direction=x_dir, bottom=x_ticks, labelbottom=x_ticklabels)
     ax.tick_params('x', which='minor', bottom=x_minor)
@@ -175,7 +176,7 @@ def apply_plot_properties(ax, plots, props, verbs):
     props = props.copy()  # remove as applied, to check for unhandled
     # Axis & lick mark labels
     props = _handle_axis_appearance(ax, plots, props, verbs)
-
+    return
     # viewing range
     auto_range = props.pop('auto_range', None)
     if auto_range == 'wave':
