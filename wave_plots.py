@@ -27,30 +27,31 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
     options = {} if options is None else options
     time_axis, freq_axis = manager.get_row_axes(row_ind)
 
-    defaults = {'freq': None,
-                'amplitude': 1.0,
-                'phase_angle': 0.0,
-                'spectrum_threshold': 0.05,  # Prune l/r parts of FFT < this fraction of peak power.
-                'spectrum_padding': 4,  # After pruning, add back this many on each side (if possible)
-                'color': 'black',
-                'kwargs': {},  # additional args to matplotlib.plot() command
-                'spectrum_kwargs': {},
-                }
+    # single-frequency wave components / properties
+    wave_props = {'freq': None,
+                  'amplitude': 1.0,
+                  'phase_angle': 0.0,
+                  'spectrum_threshold': 0.05,  # Prune l/r parts of FFT < this fraction of peak power.
+                  'spectrum_padding': 4,  # After pruning, add back this many on each side (if possible)
+                  'color': 'black',
+                  'kwargs': {},  # additional args to matplotlib.plot() command
+                  'spectrum_kwargs': {},
+                  }
 
-    waves = [defaults.copy()]
+    waves = [wave_props.copy()]
     if isinstance(freq, float):
         waves[0]['freq'] = freq
     elif isinstance(freq, dict):
 
         waves[0].update(freq)
     elif isinstance(freq, tuple):
-        waves = [defaults.copy() for _ in range(len(freq))]
+        waves = [wave_props.copy() for _ in range(len(freq))]
         for i, w in enumerate(waves):
             w['freq'] = freq[i]
     elif isinstance(freq, list):
         waves = []
         for f in freq:
-            waves.append(defaults.copy())
+            waves.append(wave_props.copy())
             waves[-1].update(f)
 
     else:
@@ -74,14 +75,10 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
                            res,
                            spectrum_threshold=waves[0]['spectrum_threshold'],
                            spectrum_padding=waves[0]['spectrum_padding'])
-    import ipdb;
-    ipdb.set_trace()
     power, freq = sig.get_power()
 
-
-    print(freq.min(), freq.max())
     # Plot frequency domain half
-    spectrum_options = defaults.copy()
+    spectrum_options = wave_props.copy()
     spectrum_options.update(options)
     return_plots[1].append(freq_axis.plot(freq[1:], power[1:],
                                           color=waves[0]['color'], **spectrum_options['spectrum_kwargs']))
@@ -91,29 +88,29 @@ def add_wave(manager, row_ind, freq=440.0, t=0.100, res=44100.0, options=None):
 
 def make_figure_1(filename=None, overwrite=False):
     # general size
-    w = 4.5  # inches
-    h = 3.5
+    w = 4.8  # inches
+    h = 4.5
     rows = 3
+    spacing =  {'hspace': 0.3, 'bottom':.1, 'left': 0.04, 'right':0.965}
 
     # set-up plot styles for each cell
     m = MultiplotManager(cells=[['waveform', 'spectrum']] * rows,
                          dims=(w, h),
                          sharex='col',
-                         overwrite=overwrite)
+                         overwrite=overwrite,
+                         spacing=spacing)
 
     # customize bottom & top rows with titles & axis labels, etc.
-    m.get_cell_style(0, 0).update({'subtitle': 'time domain - F = 110.0 Hz',})
-    m.get_cell_style(0, 1).update({'subtitle': 'frequency domain - FFT (unscaled)'})
+    m.get_cell_style(0, 0).update({'subtitle': 'F = 110.0 Hz', 'subplots_adjust':spacing})
+    m.get_cell_style(0, 1).update({'subtitle': 'FFT, (cleaned, pruned)', 'subplots_adjust':spacing})
 
     m.get_cell_style(-1, 0).update({'xlabel': r"$t$ (sec)",  # Bottom cells get x-ticks & labels
-                                    'xticklabels': True,
-                                    })
+                                    'xticklabels': True, 'subplots_adjust':spacing})
 
-    m.get_cell_style(-1, 1).update({'xlabel': r"$f$ (Hz)",  # spectrum cells get y-tick but no label
-                                    'xticklabels': True,
-                                    })
-    m.get_cell_style(1, 0).update({'subtitle': "F0 + 7 overtones"})
-    m.get_cell_style(2, 0).update({'subtitle': "7 random freq./amp."})
+    m.get_cell_style(-1, 1).update({'xlabel': r"$\log_10(f)$ (Hz)",  # spectrum cells get y-tick but no label
+                                    'xticklabels': True, 'subplots_adjust':spacing})
+    m.get_cell_style(1, 0).update({'subtitle': "F0 + 7 overtones", 'subplots_adjust':spacing})
+    m.get_cell_style(2, 0).update({'subtitle': r"7 random waves", 'subplots_adjust':spacing})
 
     for row_i in range(rows):
         m.get_cell_style(row_i, 1).update({'x_clip': [35.0, None]})
@@ -133,7 +130,6 @@ def make_figure_1(filename=None, overwrite=False):
     add_wave(m, 2, freq=tuple(freqs))
     # Finalize and save.
     m.save(filename)
-
 
 if __name__ == "__main__":
     make_figure_1()

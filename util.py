@@ -30,33 +30,35 @@ class SignalDecomposer(object):
         self._thresh = spectrum_threshold
         self._pad = spectrum_padding
 
-    def get_power(self, no_crop=True):
+    def get_power(self, no_crop=False):
         spec_margin = .5
-        min_low_to_crop = 10
+        noise_tol = 1e-6
+        freq_margin = 4
 
         p = self.mag
         freqs = self.freq_bins
-        if self._thresh is not None or not no_crop:
+        if self._thresh is not None and not no_crop:
             # min_val = np.exp((np.log(np.nanmax(self.mag))*self._thresh + (1.0 - self._thresh)*np.log(np.nanmin(self.mag))))
             min_val = np.nanmax(self.mag) * self._thresh
 
             # on the left, trim where power < threshold
             lowest_usable_index = np.min(np.where(self.mag >= min_val))
-            lowest_usable_index = np.max((lowest_usable_index - 2, 0))
-            # unless near the beginning
-            if lowest_usable_index < min_low_to_crop:
-                lowest_usable_index = 0
+            lowest_usable_index = np.max((lowest_usable_index - freq_margin, 0))
 
             # on the right, trim to 10% after final decreasing monotonicity begins
             first_half = int(self.mag.size/2)-1
 
-            increase_indices = np.where(np.diff(self.mag[:first_half]) > 0.0)[0]
+
+            increases = np.diff(self.mag[:first_half]) > 0.0
+            increases &= self.mag[1:first_half] > noise_tol
+
+            increase_indices=np.where(increases)[0]
 
             if increase_indices.size > 0:
                 final_increase = np.max(increase_indices)
                 margin = int(spec_margin * (final_increase - lowest_usable_index))
                 highest_usable_index = final_increase + margin
-                highest_usable_index = np.min((highest_usable_index - 1, first_half-1))
+                highest_usable_index = np.min((highest_usable_index +freq_margin, first_half-1))
                 print(final_increase,margin, highest_usable_index)
             else:
                 highest_usable_index = first_half
