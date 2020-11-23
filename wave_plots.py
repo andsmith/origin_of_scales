@@ -107,7 +107,7 @@ def make_figure_1(filename=None, overwrite=False):
     m.get_cell_style(-1, 0).update({'xlabel': r"$t$ (sec)",  # Bottom cells get x-ticks & labels
                                     'xticklabels': True, 'subplots_adjust':spacing})
 
-    m.get_cell_style(-1, 1).update({'xlabel': r"$\log_10(f)$ (Hz)",  # spectrum cells get y-tick but no label
+    m.get_cell_style(-1, 1).update({'xlabel': r"$\log_{10}(f)$ (Hz)",  # spectrum cells get y-tick but no label
                                     'xticklabels': True, 'subplots_adjust':spacing})
     m.get_cell_style(1, 0).update({'subtitle': "F0 + 7 overtones", 'subplots_adjust':spacing})
     m.get_cell_style(2, 0).update({'subtitle': r"7 random waves", 'subplots_adjust':spacing})

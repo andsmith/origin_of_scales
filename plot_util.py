@@ -127,9 +127,9 @@ class MultiplotManager(object):
         y_minor = props.get('yminor', False)
 
         ax.tick_params('x', direction=x_dir, bottom=x_ticks, labelbottom=x_ticklabels)
-        ax.tick_params('x', which='minor', bottom=x_minor)
+        ax.tick_params('x', direction=x_dir, which='minor', bottom=x_minor)
         ax.tick_params('y', direction=y_dir, left=y_ticks, labelleft=y_ticklabels)
-        ax.tick_params('y', which='minor', bottom=y_minor)
+        ax.tick_params('y', direction=y_dir, which='minor', bottom=y_minor)
 
 
         if 'subtitle' in props:
